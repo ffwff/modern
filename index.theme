@@ -1,6 +1,6 @@
 [theme]
-name=forests
-description=Animated Gradient background
+name=modern
+description=Modern Lightdm theme
 engine=lightdm-webkit-greeter
 url=index.html
 session=qshell

@@ -98,7 +98,6 @@
     height: 64px;
     margin-right: 10px;
     background-size: contain;
-    border-radius: 100%;
     cursor:pointer;
     }
     /*alt user */
@@ -199,7 +198,7 @@ function $(c) { return document.querySelector(c); }
 
 function pad0(n) { return n >= 10 ? n.toString() : "0" + n; }
 
-Date.prototype.getDayOfWeek = function(){
+Date.prototype.getDayOfWeek = function() {
     return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][ this.getDay() ];
 };
 
@@ -240,10 +239,10 @@ class Login {
             }
             interval++;
         }, 1000);
-        document.body.onmousemove = document.body.onkeypress = function() {
+        document.body.onmousemove = document.body.onkeypress = () => {
             $("#wrapper").className = "active";
             interval = 1;
-        }
+        };
     }
 
     bindEvents() {
@@ -253,7 +252,7 @@ class Login {
             } else {
                 $("#alt-users").className = "shown";
             }
-        }
+        };
 
         $("#main-user .password").onkeydown = e => {
             if(e.keyCode == 13) {
@@ -263,7 +262,7 @@ class Login {
             } else {
                 $("#main-user .warn").style.display="none";
             }
-        }
+        };
 
 
         // actions
@@ -295,25 +294,43 @@ class Login {
         lightdm.cancel_timed_login();
 
         $("#alt-users").className = "hidden";
-        this.defaultUser = idx == -1 ? lightdm.users[0] : this.otherUsers[idx];
+        if(idx === -1)
+            if(lightdm.select_user_hint)
+                this.defaultUser = lightdm.users.find(user => user.username === lightdm.select_user_hint);
+            else
+                this.defaultUser = lightdm.users[0];
+        else this.defaultUser = this.otherUsers[idx];
         if(this.defaultUser.session) {
-        	//TODO
-        	for(let i = 0; i < lightdm.sessions.length; i++) {
-        		if(lightdm.sessions[i].key === this.defaultUser.session) {
-        			this.changeSession(i);
-        			break;
-        		}
-        	}
+            for(let i = 0; i < lightdm.sessions.length; i++) {
+                if(lightdm.sessions[i].key === this.defaultUser.session) {
+                    this.changeSession(i);
+                    break;
+                }
+            }
+        } else {
+            this.changeSession(0);
         }
-        lightdm.start_authentication(this.defaultUser.name);
 
-        this.otherUsers = lightdm.users.filter(user => user.name != this.defaultUser.name);
+        // HACK: lightdm produces duplicate users for some reason
+        const userHash = {};
+        this.otherUsers = [];
+        for(let user of lightdm.users) {
+            if( user.username !== this.defaultUser.username &&
+                !userHash.hasOwnProperty(user.username) ) {
+                this.otherUsers.push(user);
+                userHash[user.username] = true;
+            }
+        }
+        lightdm.start_authentication(this.defaultUser.username);
+
+        // main user
         $("#main-user h1").textContent = this.defaultUser.display_name;
         $("#main-user .avatar").style.backgroundImage = "url(\""+(this.defaultUser.image|| "./im-user.svg")+"\")";
         $(".password").value="";
         $(".password").focus();
         $("#main-user .warn").style.display = "none";
 
+        // others
         let html = "";
         for(let i = 0; i < this.otherUsers.length; i++) {
             const user = this.otherUsers[i];
@@ -330,6 +347,7 @@ class Login {
             `;
         }
         $("#alt-users").innerHTML = html;
+
     }
 
     // sessions
@@ -347,9 +365,6 @@ class Login {
         $("#session-bar .container li.active").classList.remove("active");
         $(`#session-bar .container li[data-idx="${idx}"]`).classList.add("active");
     }
-
-    // authentication
-
 }
 
 function authentication_complete() {
@@ -372,14 +387,12 @@ function show_error() {
 }
 
 function show_prompt(text, type) {
-	if(text === "Password: ") {
-		lightdm.respond(window.login.password);
-	}
+    if(text === "Password: ") {
+        lightdm.respond(window.login.password);
+    }
 }
 
 __lightdm.then(result => {
-	//console.log(result.default_session);
-	//console.log(result);
     window.lightdm = result;
     window.login = new Login();
 });
