@@ -1,5 +1,7 @@
 # login
 
+![Screenshot](/screenshot.png)
+
 a simple login theme for lightdm-webkit2-greeter.
 
 // i should really clean this up
