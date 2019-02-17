@@ -1,0 +1,390 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>login</title>
+    <meta charset='utf-8'/>
+    <style>
+    *{padding:0;margin:0;box-sizing:border-box;}
+    #wrapper{
+    position:absolute;
+    top:0;left:0;right:0;bottom:0;
+    background-image: url("./bg.jpg");
+    background-repeat: no-repeat;
+    z-index:-999;
+    overflow:hidden;
+    }
+    #wrapper>* {
+    transition: opacity .5s;
+    }
+    #wrapper.inactive >*{opacity: 0;}
+    #wrapper.active >*{opacity: 1;}
+    #wrapper.inactive >#time{
+    opacity:1;}
+    body{font-family:"SF Pro Text";}
+
+    /* time*/
+
+    #time{
+        position: absolute;
+        bottom: 40px;
+        right: 40px;
+        text-align: right;
+        color: white;
+        padding: 20px;
+        text-shadow: 0 0 5px #000;
+    }
+    .background {
+        position: absolute;
+        width: 100%;
+        height:100%;
+        top:0;left:0;
+        z-index:-1;
+        background-image:url("./bg-blurred.jpg");
+        background-attachment: fixed;
+        filter:brightness(60%);
+    }
+    #time h1 {
+    font-size: 96px;
+    font-style: normal;
+    font-weight: 1;
+    }
+    #time h2 {
+    font-weight: 1;
+    }
+    /* user */
+    #users{
+        position: absolute;
+        bottom: 40px;
+        left: 40px;
+    }
+    .user {
+    position:relative;
+    padding: 10px 15px;
+    display:table;
+    height: 64px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    #alt-users > div{ cursor: pointer; }
+    #alt-users > div:hover{ background: rgba(0,0,0,0.3); }
+    .user .background {border-radius: 10px;
+        margin-bottom: 20px;}
+    .user h1 {
+    font-size: 15px;
+    color: #fff;
+    margin-left: 20px;
+        text-shadow: 0 0 5px #000;
+    }
+    #main-user h1 {
+    margin-top: -5px;
+    margin-bottom: 5px; }
+    #main-user .warn {
+    font-size: 10px; margin-left: 20px;
+    margin-top: 5px;
+    margin-bottom: -3px;
+    color: #ddd;
+    }
+    .user input[type="password"] {
+    width: 100%;
+    padding: 5px 20px;
+    border: 1px solid rgba(0,0,0,0.3);
+    border-radius: 20px;
+    background: rgba(0,0,0,0.3);
+    color:#fff;
+    }
+    .user .avatar {
+    width: 64px;
+    height: 64px;
+    margin-right: 10px;
+    background-size: contain;
+    border-radius: 100%;
+    cursor:pointer;
+    }
+    /*alt user */
+    #alt-users {
+        transition: margin-left 0.3s;
+    }
+    #alt-users.hidden {
+        margin-left: -280px;
+    }
+    #alt-users.shown {
+        margin-left: 0;
+    }
+    /*btns */
+    #actions{
+        position: absolute;
+        right: 40px;
+        top: 40px;
+        padding: 5px 15px;
+        height:42px;
+    border-radius: 20px;
+    }
+    #actions .background { border-radius: 20px; }
+    #actions span {
+        display:inline-block;
+        width: 32px;
+        height:33px;
+        cursor:pointer;
+        background-position: center;
+        border-bottom: 1px solid transparent;
+        margin-right: 5px;
+        }
+    #actions span:last-child { margin-right:0; }
+    #actions span:hover {border-bottom: 1px solid #fff;}
+    #poweroff{ background-image: url("./system-shutdown.svg"); }
+    #reboot{ background-image: url("./reboot.svg"); }
+    #suspend{ background-image: url("./system-suspend.svg"); }
+    #hibernate{ background-image: url("./system-suspend-hibernate.svg"); }
+    /*session bar*/
+    #session-bar {
+    position: absolute;
+    left: 40px;
+    bottom: 10px;
+    list-style-type: none;
+    padding: 10px;
+    border-radius: 10px;
+    }
+    #session-bar .background { border-radius: 10px; }
+    #session-bar li {
+    display: inline-block;
+    border-right: 1px solid #aaa;
+    padding: 0 10px;
+    cursor:pointer;
+    color: #aaa;
+    }
+    #session-bar li:last-child { border: 0 none; }
+    #session-bar li.active{
+    color: #fff;
+    font-weight: bold;
+    }
+    </style>
+</head>
+
+<body>
+    <div id="wrapper" class="inactive">
+        <div id="actions">
+            <div class="background"></div>
+            <span id="poweroff" title="poweroff"></span>
+            <span id="reboot" title="reboot"></span>
+            <span id="suspend" title="suspend"></span>
+            <span id="hibernate" title="hibernate"></span>
+        </div>
+        <ul id="session-bar">
+            <div class="background"></div>
+            <div class="container"></div>
+        </ul>
+        <div id="users">
+            <div id="alt-users" class="hidden"></div>
+            <div class="user" id="main-user">
+                <div class="background"></div>
+                <div style='display:table-cell; vertical-align: bottom;'>
+                <div class="avatar"></div>
+                </div>
+                <div style='display:table-cell; vertical-align: bottom;'>
+                <h1>name</h1>
+                <input class="password" type="password" placeholder="パスワード" />
+                <p class="warn" style="display:none;">try again?</p>
+                </div>
+            </div>
+        </div>
+        <div id="time">
+            <h1 id="time-text">00:00</h1>
+            <h2 id="date-text">monday, jan 1</h2>
+        </div>
+    </div>
+    <script>
+
+function $(c) { return document.querySelector(c); }
+
+function pad0(n) { return n >= 10 ? n.toString() : "0" + n; }
+
+Date.prototype.getDayOfWeek = function(){
+    return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][ this.getDay() ];
+};
+
+Date.prototype.getMonthName = function() {
+    return ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ][this.getMonth()];
+};
+
+class Login {
+
+    constructor() {
+        this.defaultUser = null;
+        this.otherUsers = [];
+        this.password = "";
+
+        this.bindInactive();
+        this.bindEvents();
+        this.setupSessions();
+        this.setupUsers();
+        this.updateTime();
+    }
+
+    // time
+    updateTime(){
+        const d = new Date();
+        $("#time-text").textContent = `${pad0(d.getHours())}:${pad0(d.getMinutes())}`;
+        $("#date-text").textContent = `${d.getDayOfWeek()}, ${d.getMonthName()} ${d.getDate()}`.toLowerCase();
+        setTimeout(this.updateTime, 1000);
+    }
+
+    // events
+    bindInactive() {
+        let interval = 1;
+        setInterval(() => {
+            if(interval === 4) {
+                $("#wrapper").className = "inactive";
+                interval = 1;
+                return;
+            }
+            interval++;
+        }, 1000);
+        document.body.onmousemove = document.body.onkeypress = function() {
+            $("#wrapper").className = "active";
+            interval = 1;
+        }
+    }
+
+    bindEvents() {
+        $("#main-user .avatar").onclick = () => {
+            if($("#alt-users").className === "shown") {
+                $("#alt-users").className = "hidden";
+            } else {
+                $("#alt-users").className = "shown";
+            }
+        }
+
+        $("#main-user .password").onkeydown = e => {
+            if(e.keyCode == 13) {
+                if(!lightdm._username)
+                    lightdm.start_authentication(this.defaultUser.name);
+                this.password = $("#main-user .password").value;
+            } else {
+                $("#main-user .warn").style.display="none";
+            }
+        }
+
+
+        // actions
+        $("#poweroff").onclick = () => lightdm.shutdown();
+        $("#reboot").onclick = () => lightdm.restart();
+        $("#suspend").onclick = () => lightdm.suspend();
+        $("#hibernate").onclick = () => lightdm.hibernate();
+
+        if(!lightdm.can_shutdown)  $("#poweroff").style.display="none";
+        if(!lightdm.can_restart)   $("#reboot").style.display="none";
+        if(!lightdm.can_suspend)   $("#suspend").style.display="none";
+        if(!lightdm.can_hibernate) $("#hibernate").style.display="none";
+        if(!lightdm.can_shutdown && !lightdm.can_restart &&
+           !lightdm.can_suspend && !lightdm.can_hibernate) {
+           // is this even necessary?
+           $("#actions").style.display="none";
+        }
+    }
+
+    // users
+    setupUsers() {
+        this.updateDefault(-1);
+    }
+
+    updateDefault(idx) {
+        if(lightdm._username){
+            lightdm.cancel_authentication();
+        }
+        lightdm.cancel_timed_login();
+
+        $("#alt-users").className = "hidden";
+        this.defaultUser = idx == -1 ? lightdm.users[0] : this.otherUsers[idx];
+        if(this.defaultUser.session) {
+        	//TODO
+        	for(let i = 0; i < lightdm.sessions.length; i++) {
+        		if(lightdm.sessions[i].key === this.defaultUser.session) {
+        			this.changeSession(i);
+        			break;
+        		}
+        	}
+        }
+        lightdm.start_authentication(this.defaultUser.name);
+
+        this.otherUsers = lightdm.users.filter(user => user.name != this.defaultUser.name);
+        $("#main-user h1").textContent = this.defaultUser.display_name;
+        $("#main-user .avatar").style.backgroundImage = "url(\""+(this.defaultUser.image|| "./im-user.svg")+"\")";
+        $(".password").value="";
+        $(".password").focus();
+        $("#main-user .warn").style.display = "none";
+
+        let html = "";
+        for(let i = 0; i < this.otherUsers.length; i++) {
+            const user = this.otherUsers[i];
+            html += `
+            <div class="user" onClick="window.login.updateDefault(${i});">
+                <div class="background"></div>
+                <div style='display:table-cell; vertical-align: bottom;'>
+                    <div class="avatar" style="background-image:url('${user.image || "./im-user.svg"}');"></div>
+                </div>
+                <div style='display:table-cell; vertical-align: middle;'>
+                    <h1>${user.display_name}</h1>
+                </div>
+            </div>
+            `;
+        }
+        $("#alt-users").innerHTML = html;
+    }
+
+    // sessions
+    setupSessions() {
+        let html = "";
+        for(let i = 0; i < lightdm.sessions.length; i++) {
+            const session = lightdm.sessions[i];
+            html+=`<li data-idx="${i}" onclick="window.login.changeSession(${i});">${session.name}</li>`;
+        }
+        $("#session-bar .container").innerHTML = html;
+        $("#session-bar .container li:first-child").classList.add("active");
+    }
+
+    changeSession(idx) {
+        $("#session-bar .container li.active").classList.remove("active");
+        $(`#session-bar .container li[data-idx="${idx}"]`).classList.add("active");
+    }
+
+    // authentication
+
+}
+
+function authentication_complete() {
+	console.log("complete?");
+    if (lightdm.is_authenticated)
+        lightdm.login(lightdm.authentication_user, lightdm.sessions[parseInt($("#session-bar .active").dataset.idx)].key);
+    else if(window.login.password) {
+        $("#main-user .warn").style.display = "block";
+        $("#main-user .warn").textContent="try again?";
+    }
+}
+
+function show_message(msg) {
+    $("#main-user .warn").textContent = err;
+    $("#main-user .warn").style.display = "block";
+}
+
+function show_error() {
+    console.log("error");
+}
+
+function show_prompt(text, type) {
+	if(text === "Password: ") {
+		lightdm.respond(window.login.password);
+	}
+}
+
+__lightdm.then(result => {
+	//console.log(result.default_session);
+	//console.log(result);
+    window.lightdm = result;
+    window.login = new Login();
+});
+
+    </script>
+</body>
+
+</html>
